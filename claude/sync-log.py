@@ -1,19 +1,8 @@
 #!/usr/bin/env python3
-"""
-知识库同步检测脚本
-
-功能：
-1. 检测 raw/ 目录下新增/删除的 .md 文件
-2. 扫描空壳文件（极小文件或含平台残留文字）
-3. 与 learning-log.json 对账
-
-用法：在项目根目录运行 `python3 claude/sync-log.py`
-依赖：无第三方包，仅需 Python 3.6+
-"""
-
 import json
 import os
-from datetime import datetime
+import sys
+from datetime import datetime, timezone
 
 LOG_FILE = ".claude/learning-log.json"
 
@@ -33,12 +22,7 @@ SHELL_PATTERNS = [
 
 
 def get_actual_files():
-    """扫描 raw/ 目录下所有 .md 文件"""
     files = set()
-    if not os.path.isdir("raw"):
-        print("[WARN] raw/ 目录不存在，创建空目录")
-        os.makedirs("raw", exist_ok=True)
-        return files
     for root, dirs, filenames in os.walk("raw"):
         for f in filenames:
             if f.endswith('.md'):
@@ -48,22 +32,11 @@ def get_actual_files():
 
 
 def load_log():
-    """加载学习记录，若文件不存在则返回空记录"""
-    if not os.path.exists(LOG_FILE):
-        print("[INFO] learning-log.json 不存在，初始化为空记录")
-        os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
-        return {"entries": {}, "total-files": 0, "learned-count": 0, "last-scan": ""}
     with open(LOG_FILE, 'r') as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            print("[WARN] learning-log.json 格式错误，重建空记录")
-            return {"entries": {}, "total-files": 0, "learned-count": 0, "last-scan": ""}
+        return json.load(f)
 
 
 def save_log(log):
-    """保存学习记录"""
-    os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
     with open(LOG_FILE, 'w') as f:
         json.dump(log, f, ensure_ascii=False, indent=2)
 
@@ -101,8 +74,74 @@ def scan_shells():
     return shells
 
 
+def mark_learned(file_paths):
+    """将指定文件标记为已学习。
+
+    Args:
+        file_paths: raw/ 下的相对路径列表，如 ["policy/xxx.md", "sources/yyy.md"]
+
+    每个文件在 learning-log.json 中新增或更新条目：
+    - 首次标记：创建 learned=true, learned-at=<now>, status=completed
+    - 重复标记：仅更新 learned-at 时间戳
+    """
+    log = load_log()
+    now = datetime.now(timezone.utc).isoformat()
+    updated = 0
+    skipped = 0
+    missing = []
+
+    for path in file_paths:
+        # 验证文件存在
+        full_path = os.path.join("raw", path)
+        if not os.path.exists(full_path):
+            missing.append(path)
+            continue
+
+        if path in log['entries']:
+            entry = log['entries'][path]
+            if entry.get('status') == 'completed':
+                skipped += 1
+                # 更新时间戳
+                entry['learned-at'] = now
+            else:
+                entry['learned'] = True
+                entry['learned-at'] = now
+                entry['status'] = 'completed'
+                updated += 1
+        else:
+            log['entries'][path] = {
+                'learned': True,
+                'learned-at': now,
+                'status': 'completed'
+            }
+            updated += 1
+
+    # 更新统计
+    actual = get_actual_files()
+    log['total-files'] = len(actual)
+    log['learned-count'] = sum(
+        1 for e in log['entries'].values()
+        if isinstance(e, dict) and e.get('status') == 'completed'
+    )
+    log['last-learn'] = now
+    log['last-scan'] = now
+
+    save_log(log)
+
+    # 输出结果
+    if updated > 0:
+        print(f"✅ 已标记 {updated} 个文件为已完成")
+    if skipped > 0:
+        print(f"⏭  {skipped} 个文件已标记过（仅更新时间戳）")
+    if missing:
+        print(f"❌ {len(missing)} 个文件不存在于 raw/ 中:")
+        for m in missing:
+            print(f"   - {m}")
+
+    return updated, skipped, missing
+
+
 def sync():
-    """主流程：比对实际文件与记录，输出差异报告"""
     actual = get_actual_files()
     log = load_log()
     recorded = set(log['entries'].keys())
@@ -171,4 +210,13 @@ def sync():
 
 
 if __name__ == "__main__":
-    sync()
+    if len(sys.argv) >= 2 and sys.argv[1] == '--mark-learned':
+        # 用法: python3 .claude/sync-log.py --mark-learned "policy/xxx.md" "sources/yyy.md"
+        file_paths = sys.argv[2:]
+        if not file_paths:
+            print("用法: python3 .claude/sync-log.py --mark-learned <file1> [file2 ...]")
+            print("示例: python3 .claude/sync-log.py --mark-learned \"policy/xxx.md\" \"sources/yyy.md\"")
+            sys.exit(1)
+        mark_learned(file_paths)
+    else:
+        sync()
