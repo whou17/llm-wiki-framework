@@ -27,24 +27,28 @@ flowchart TD
         T2["说 '学习新增'"]
         T3["说 '查/关于XXX'"]
         T4["说 '健康检查'"]
+        T5["说 '对比分析'"]
     end
 
     subgraph Control["🧠 控制层 (claude/)"]
         CLAUDE["CLAUDE.md<br/>总控工作指引"]
         SYNC["sync-log.py<br/>增量检测脚本"]
+        POLICY["policy-organize.py<br/>制度梳理脚本"]
     end
 
     subgraph Schema["📐 规范层 (schema/)"]
         S0["0.index.md<br/>规则索引"]
         S1["1.frontmatter-spec.md<br/>元数据规范"]
         S2["2.tag-index-template.md<br/>标签字典"]
-        S3["3.learning-methods.md<br/>学习方法论"]
+        S3["3.learning-methods.md<br/>学习方法论（含对比模式）"]
+        S4["4.domain-extension-example.md<br/>领域扩展模板"]
     end
 
-    subgraph Pipeline["⚙️ 三大工作流"]
+    subgraph Pipeline["⚙️ 工作流"]
         K_IN["Knowledge-IN<br/>6步摄入流水线"]
         K_OUT["Knowledge-OUT<br/>4步知识检索"]
         K_LINT["Knowledge-LINT<br/>5维健康检查"]
+        K_CMP["对比模式<br/>C1-C6 修改痕迹建模"]
     end
 
     subgraph Data["📦 数据层"]
@@ -59,11 +63,14 @@ flowchart TD
     T2 --> K_IN
     T3 --> K_OUT
     T4 --> K_LINT
+    T5 --> K_CMP
 
     CLAUDE --> K_IN
     CLAUDE --> K_OUT
     CLAUDE --> K_LINT
+    CLAUDE --> K_CMP
 
+    K_IN --> K_CMP
     K_IN --> S2
     K_IN --> S3
     K_IN --> S1
@@ -73,6 +80,7 @@ flowchart TD
     K_IN --> WIKI
     K_OUT --> WIKI
     K_LINT --> WIKI
+    K_CMP --> WIKI
 
     WIKI --> WIKI_E
     WIKI --> WIKI_C
@@ -83,8 +91,8 @@ flowchart TD
 
 | 层 | 目录 | 职责 | 关键文件 |
 |---|------|------|---------|
-| **控制层** | `claude/` | 定义 LLM 行为的自然语言工作指引 + 工具脚本 | `CLAUDE.md`, `sync-log.py` |
-| **规范层** | `schema/` | 规则标准，不包含知识内容 | 4 个 .md 规范文件 |
+| **控制层** | `claude/` | 定义 LLM 行为的自然语言工作指引 + 工具脚本 | `CLAUDE.md`, `sync-log.py`, `policy-organize.py` |
+| **规范层** | `schema/` | 规则标准，不包含知识内容 | 5 个 .md 规范文件 |
 | **数据层** | `raw/` + `wiki/` | 原始语料（不可变）+ 知识萃取（可写）| 用户按需填充 |
 
 核心思路：**控制层告诉 LLM 做什么，规范层告诉 LLM 怎么做，数据层是 LLM 操作的对象。**
@@ -98,12 +106,14 @@ your-knowledge-base/
 ├── .claude/                ← Claude Code 配置（可选，如果你用 Claude Code）
 ├── claude/                 ← 本框架：工作流配置
 │   ├── CLAUDE.md           ← LLM 总控工作指引
-│   └── sync-log.py         ← 增量检测 + 空壳扫描
+│   ├── sync-log.py         ← 增量检测 + 空壳扫描
+│   └── policy-organize.py  ← 制度文件分类与重命名
 ├── schema/                 ← 本框架：规则标准
 │   ├── 0.index.md          ← 规则索引
 │   ├── 1.frontmatter-spec.md ← Frontmatter 规范
 │   ├── 2.tag-index-template.md ← 标签体系模板
-│   └── 3.learning-methods.md   ← 结构化学习法
+│   ├── 3.learning-methods.md   ← 结构化学习法（含对比模式）
+│   └── 4.domain-extension-example.md ← 领域扩展模板
 ├── templates/              ← 本框架：初始化模板
 │   └── wiki-directory-structure.md
 ├── raw/                    ← 原始语料（只写不入）
@@ -125,7 +135,7 @@ your-knowledge-base/
 
 ---
 
-## 三大工作流详解
+## 工作流详解
 
 ### 1. Knowledge-IN（知识摄入）
 
@@ -150,7 +160,8 @@ Step 3: 讨论确认
 Step 4: 按类型提取
    ├─ 政策类 → 政策学习法（5步）
    ├─ 案例类 → 案例拆解法（四问+双写）
-   └─ 学术类 → 观点萃取法（3步）
+   ├─ 学术类 → 观点萃取法（3步）
+   └─ 🔀 对比模式 → 六维对比 C1-C6（自动检测触发）
 
 Step 5: 存储
    ├─ 外部来源 → wiki/concepts/ 或 wiki/entities/
@@ -165,7 +176,7 @@ Step 6: 更新记录
 **触发词**: "查"、"调取"、"关于XXX"
 
 ```
-解析需求 → Grep检索wiki → 输出结果(标来源+置信度) → 有价值则回写synthesis/
+解析需求 → Grep检索wiki + schema → 输出结果(标来源+置信度) → 有价值则回写synthesis/
 ```
 
 ### 3. Knowledge-LINT（健康检查）
@@ -175,6 +186,20 @@ Step 6: 更新记录
 ```
 矛盾检测 → 时效检测(>60天未更新) → 孤立检测(无入链页面) → 缺口检测 → 输出报告
 ```
+
+### 4. 对比模式（修改痕迹反向建模）`NEW in v6.1`
+
+**触发词**: "对比分析"（手动）或 Knowledge-IN Step 4 自动检测
+
+通过我方初稿与决策者终稿的增/删/改差异，反向推演决策者的关注热点和思维模式。
+
+```
+C1: 识别对应稿件 → C2: A-F六维对比 → C3: 知识分流 → C4: 画像更新 → C5: 总体判断 → C6: 回链更新
+```
+
+**六维对比**: 新增(A) / 删除(B) / 重写(C) / 语言(D) / 知识引用(E) / 场合适配(F)
+
+**核心洞察**: 修改痕迹的信号强度高于公开讲话——每次增/删/改都是决策者的主动选择，揭示了"他认为什么重要、什么不重要、应该从什么角度说"。
 
 ---
 
@@ -262,6 +287,17 @@ Step 6: 更新记录
 
 **原因**: 防止信息孤岛。如果只写 entities/，用户从概念角度检索时找不到其他机构的做法。如果只写 concepts/，无法建立"某机构有什么特色"的全局视角。
 
+### 9. 对比模式：修改痕迹反向建模 `NEW in v6.1`
+
+**决策**: 新增对比模式（C1-C6），通过我方初稿与决策者终稿的增/删/改差异，反向推演决策者的认知图谱。
+
+**原因**:
+- 公开讲话是决策者"想让别人看到的"，修改痕迹才是"他真正在想的"
+- 每次增/删/改都是主动选择：新增揭示关注热点，删除揭示不重要/不合适的内容，重写揭示思维框架
+- 传统画像依赖公开信息，对比模式补充了"负向信号"（删除）和"角度偏移"（重写）两个维度
+
+**实战价值**: 首次执行即发现决策场合存在系统性的理论/部署比例调整模式、对标院校引用习惯、以及结尾段的稳定偏好——这些都无法从公开讲话中获取。详见 `schema/4.domain-extension-example.md`。
+
 ---
 
 ## 快速上手
@@ -269,7 +305,7 @@ Step 6: 更新记录
 ### 前提条件
 
 - **LLM 引擎**: Claude Code、Claude Agent SDK、或任何支持长上下文 + 工具调用的 LLM 环境
-- **Python 3.6+**: 仅用于 sync-log.py 脚本
+- **Python 3.6+**: 用于 sync-log.py 和 policy-organize.py 脚本
 - **可选工具**: 
   - `defuddle`（网页正文提取，处理链接壳文件）
   - `pdfplumber`（PDF 文字提取）
@@ -304,12 +340,17 @@ cp templates/wiki-directory-structure.md wiki/index.md
 
 对于其他 LLM 环境，将 `claude/CLAUDE.md` 和 `schema/` 目录的内容作为 system prompt 或上下文文件传入。
 
-### 步骤 5: 开始摄入
+### 步骤 5: （可选）配置领域扩展
+
+如果你的场景涉及特定决策者或特定类型的产出，参考 `schema/4.domain-extension-example.md` 创建领域扩展文件，并在 CLAUDE.md 的触发表中注册。
+
+### 步骤 6: 开始摄入
 
 1. 将原始文件放入 `raw/` 对应子目录
 2. 对 LLM 说 **"同步检测"** 查看新文件
 3. 对 LLM 说 **"学习新增"** 启动摄入流程
 4. 定期对 LLM 说 **"健康检查"** 维护知识库质量
+5. 如有对比需求，对 LLM 说 **"对比分析"** 启动修改痕迹建模
 
 ---
 
@@ -323,11 +364,11 @@ MIT License. 自由使用，自由修改。
 
 | 指标 | 数据 |
 |------|------|
-| 核心代码 | 1 个 Python 脚本 (sync-log.py, ~160行) |
-| 规范文件 | 4 个 Markdown 规范文件 |
-| 工作指引 | CLAUDE.md (~240行) |
+| 核心脚本 | 2 个 Python 脚本 (sync-log.py + policy-organize.py) |
+| 规范文件 | 5 个 Markdown 规范文件 |
+| 工作指引 | CLAUDE.md (~470行) |
+| 提取方法 | 3 种基础方法 + 1 种对比模式 |
 | 标签体系 | 13 一级标签 + ~90 二级标签（模板，可替换） |
-| 方法论文档 | 3 种提取方法 + 1 种存储策略 |
 | 实际运营页面 | 134 页（概念 + 实体 + 综合分析） |
 
 ---
