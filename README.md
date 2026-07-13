@@ -28,12 +28,20 @@ flowchart TD
         T3["说 '查/关于XXX'"]
         T4["说 '健康检查'"]
         T5["说 '对比分析'"]
+        T6["说 '调整格式'"]
+        T7["说 '框架同步'"]
     end
 
     subgraph Control["🧠 控制层 (claude/)"]
         CLAUDE["CLAUDE.md<br/>总控工作指引"]
         SYNC["sync-log.py<br/>增量检测脚本"]
         POLICY["policy-organize.py<br/>制度梳理脚本"]
+        DOCX["docx-formatter.py<br/>公文格式管道"]
+    end
+
+    subgraph Agents["🤖 Agent 层 (claude/agents/)"]
+        AG_DOCX["docx-formatter<br/>公文格式调整+修订"]
+        AG_SYNC["framework-sync<br/>框架同步→GitHub"]
     end
 
     subgraph Schema["📐 规范层 (schema/)"]
@@ -64,11 +72,15 @@ flowchart TD
     T3 --> K_OUT
     T4 --> K_LINT
     T5 --> K_CMP
+    T6 --> AG_DOCX
+    T7 --> AG_SYNC
 
     CLAUDE --> K_IN
     CLAUDE --> K_OUT
     CLAUDE --> K_LINT
     CLAUDE --> K_CMP
+    CLAUDE --> AG_DOCX
+    CLAUDE --> AG_SYNC
 
     K_IN --> K_CMP
     K_IN --> S2
@@ -91,11 +103,12 @@ flowchart TD
 
 | 层 | 目录 | 职责 | 关键文件 |
 |---|------|------|---------|
-| **控制层** | `claude/` | 定义 LLM 行为的自然语言工作指引 + 工具脚本 | `CLAUDE.md`, `sync-log.py`, `policy-organize.py` |
+| **控制层** | `claude/` | 定义 LLM 行为的自然语言工作指引 + 工具脚本 | `CLAUDE.md`, `sync-log.py`, `policy-organize.py`, `docx-formatter.py` |
+| **Agent 层** | `claude/agents/` | 可复用的领域 Agent 定义，每个 Agent 封装完整工作流 | `docx-formatter.md`, `framework-sync.md` |
 | **规范层** | `schema/` | 规则标准，不包含知识内容 | 5 个 .md 规范文件 |
 | **数据层** | `raw/` + `wiki/` | 原始语料（不可变）+ 知识萃取（可写）| 用户按需填充 |
 
-核心思路：**控制层告诉 LLM 做什么，规范层告诉 LLM 怎么做，数据层是 LLM 操作的对象。**
+核心思路：**控制层告诉 LLM 做什么，Agent 层封装怎么做，规范层约束标准，数据层是操作对象。**
 
 ---
 
@@ -107,7 +120,11 @@ your-knowledge-base/
 ├── claude/                 ← 本框架：工作流配置
 │   ├── CLAUDE.md           ← LLM 总控工作指引
 │   ├── sync-log.py         ← 增量检测 + 空壳扫描
-│   └── policy-organize.py  ← 制度文件分类与重命名
+│   ├── policy-organize.py  ← 制度文件分类与重命名
+│   ├── docx-formatter.py   ← 公文格式管道脚本
+│   └── agents/             ← Agent 定义
+│       ├── docx-formatter.md  ← 公文格式调整 Agent
+│       └── framework-sync.md  ← 框架同步 Agent
 ├── schema/                 ← 本框架：规则标准
 │   ├── 0.index.md          ← 规则索引
 │   ├── 1.frontmatter-spec.md ← Frontmatter 规范
@@ -200,6 +217,35 @@ C1: 识别对应稿件 → C2: A-F六维对比 → C3: 知识分流 → C4: 画�
 **六维对比**: 新增(A) / 删除(B) / 重写(C) / 语言(D) / 知识引用(E) / 场合适配(F)
 
 **核心洞察**: 修改痕迹的信号强度高于公开讲话——每次增/删/改都是决策者的主动选择，揭示了"他认为什么重要、什么不重要、应该从什么角度说"。
+
+### 5. docx-formatter（公文格式调整）`NEW in v6.1`
+
+**触发词**: "调整格式"、"docx格式"、"标准格式"
+
+将任意 .doc/.docx 文件按中国党政公文标准格式调整，同时用修订模式标记所有内容修正。
+
+```
+读取源文件 → 分类段落(6种类型) → 识别内容问题(错别字/非标准表述)
+→ 生成JSON指令清单 → 调用Python脚本生成docx → AI复检(16项清单)
+→ 发现问题→修复→重新生成 → 完成
+```
+
+**核心设计**:
+- **AI 做判断，脚本做执行**: AI 只输出 JSON 指令清单（段落类型 + 内容修正），Python 脚本处理全部 OOXML 细节
+- **AI 复检循环**: 生成后自动解包验证 10 项格式指标 + 6 项内容指标，发现问题自动循环修复
+- **修订模式**: 所有内容修正以 `<w:del>` / `<w:ins>` 标记，用户可逐条接受/拒绝
+
+**支持的格式规范**: A4页面、方正小标宋标题、黑体/楷体标题、仿宋正文、28磅行距、奇偶页页码、东亚字体设置
+
+### 6. framework-sync（框架同步）`NEW in v6.1`
+
+**触发词**: "框架同步"、"汇总上传"、"同步框架"
+
+将知识库工作流的演进自动汇总到 `llm-wiki-framework/` 仓库并推送 GitHub。
+
+```
+扫描源文件 → 对比已有导出 → 同步文件(含脱敏) → 更新README(架构图/能力矩阵/changelog) → Git提交推送
+```
 
 ---
 
@@ -298,6 +344,26 @@ C1: 识别对应稿件 → C2: A-F六维对比 → C3: 知识分流 → C4: 画�
 
 **实战价值**: 首次执行即发现决策场合存在系统性的理论/部署比例调整模式、对标院校引用习惯、以及结尾段的稳定偏好——这些都无法从公开讲话中获取。详见 `schema/4.domain-extension-example.md`。
 
+### 10. Agent 系统：从 Skill 到可复用 Agent `NEW in v6.1`
+
+**决策**: 将复杂工作流封装为独立 Agent 定义文件，而非内嵌在 CLAUDE.md 中。
+
+**原因**:
+- CLAUDE.md 已接近 500 行。继续膨胀会导致 LLM 上下文过载，降低对核心规则的注意力
+- Agent 定义文件是独立单元，可以单独更新、单独测试
+- 每个 Agent 封装完整的"扫描→分析→执行→复检"循环，LLM 只需读取对应文件即可执行
+- Agent 可以相互调用（如 framework-sync 扫描 docx-formatter Agent 的定义并将其导出）
+
+**Agent 设计模式**:
+```
+[Step 1] 读取源文件 → [Step 2-N] 分析+执行 → [Step N] AI复检 → [Step N+1] 修复循环 → 完成
+```
+
+关键特征：
+- 每一步有明确的 CRITICAL / IMPORTANT 优先级标记
+- 最终步骤始终包含 AI 复检或用户确认
+- 降级路径：主方案失败时有预设的备用方案
+
 ---
 
 ## 快速上手
@@ -364,13 +430,43 @@ MIT License. 自由使用，自由修改。
 
 | 指标 | 数据 |
 |------|------|
-| 核心脚本 | 2 个 Python 脚本 (sync-log.py + policy-organize.py) |
+| 核心脚本 | 3 个 Python 脚本 (sync-log.py + policy-organize.py + docx-formatter.py) |
+| Agent 定义 | 2 个 Agent (docx-formatter + framework-sync) |
 | 规范文件 | 5 个 Markdown 规范文件 |
-| 工作指引 | CLAUDE.md (~470行) |
+| 工作指引 | CLAUDE.md (~500行) |
 | 提取方法 | 3 种基础方法 + 1 种对比模式 |
+| 触发词 | 9 个触发词覆盖 6 种工作流 |
 | 标签体系 | 13 一级标签 + ~90 二级标签（模板，可替换） |
 | 实际运营页面 | 134 页（概念 + 实体 + 综合分析） |
 
 ---
 
 *本框架源自一个高校管理知识库的实际运营经验（约半年），已摄入 50+ 份政策文件、40 所高校案例、20+ 篇研究资料，产出 20+ 篇综合分析报告。框架部分为从项目中独立提取，不包含任何私有数据。*
+
+---
+
+## Changelog
+
+### v6.1 (2026-07-13)
+
+- 🆕 **docx-formatter Agent + 脚本**: 公文格式调整管道，AI 生成 JSON 指令 → Python 脚本生成 .docx → AI 复检循环
+- 🆕 **framework-sync Agent**: 工作流演进自动汇总 → llm-wiki-framework → GitHub 开源同步
+- 🆕 **Agent 系统**: 将复杂工作流封装为独立 Agent 定义文件（`claude/agents/`）
+- 🆕 **AI 复检模式**: 生成→验证→修复循环，16 项复检清单
+- 📝 CLAUDE.md 扩展至 ~500 行，新增 Agent 引用和强制前置读取规则
+- 📝 触发词从 6 个增至 9 个
+- 📝 schema 文件更新至最新版本
+
+### v6.0 (2026-06-12)
+
+- 新增指令优先级体系 (L1-L4)
+- 新增模型能力边界声明
+- 新增降级路径总表
+- 新增 Wiki 输出格式规范
+
+### v5.0 及更早
+
+- Knowledge-IN/OUT/LINT 三大工作流
+- 对比模式 C1-C6
+- 标签体系 v4.2
+- 三层分流存储策略

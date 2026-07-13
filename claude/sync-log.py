@@ -141,6 +141,32 @@ def mark_learned(file_paths):
     return updated, skipped, missing
 
 
+def _find_relocations(new_files, deleted_files, log):
+    """检测搬迁文件：被删文件在新路径出现时，转移学习记录而非删除。
+
+    匹配规则：基文件名（不含目录部分）相同即视为搬迁。
+    """
+    new_basenames = {}
+    for f in new_files:
+        base = os.path.basename(f)
+        if base not in new_basenames:
+            new_basenames[base] = []
+        new_basenames[base].append(f)
+
+    relocations = {}  # old_path -> new_path
+    still_deleted = []
+
+    for f in deleted_files:
+        base = os.path.basename(f)
+        if base in new_basenames:
+            # 取第一个匹配的新路径（同一基名应只有一个）
+            relocations[f] = new_basenames[base][0]
+        else:
+            still_deleted.append(f)
+
+    return relocations, still_deleted
+
+
 def sync():
     actual = get_actual_files()
     log = load_log()
@@ -187,23 +213,44 @@ def sync():
     if matched:
         print(f"已匹配: {len(matched)}")
 
-    if deleted_files:
-        for f in deleted_files:
+    # === 搬迁检测：先于清理执行 ===
+    relocations, still_deleted = _find_relocations(new_files, deleted_files, log)
+    relocation_count = len(relocations)
+
+    if relocations:
+        print(f"\n📦 检测到 {relocation_count} 个搬迁文件（基名匹配，转移学习记录）:")
+        for old_path, new_path in sorted(relocations.items()):
+            print(f"   {old_path[:50]}... → {new_path[:50]}...")
+            # 转移记录：保留原有学习状态，更新路径
+            log['entries'][new_path] = log['entries'].pop(old_path)
+            # 从 new_files 中移除（不再视为新增未记录）
+            new_files.discard(new_path)
+
+    if still_deleted:
+        for f in still_deleted:
             del log['entries'][f]
         log['total-files'] = len(actual)
         log['learned-count'] = len(actual) - len(new_files)
         log['last-scan'] = datetime.now().isoformat() + 'Z'
         save_log(log)
-        print(f"\n已清理 {len(deleted_files)} 条过期记录")
+        print(f"\n已清理 {len(still_deleted)} 条过期记录")
+    elif relocations:
+        # 有搬迁但无其他删除，仍需保存
+        log['total-files'] = len(actual)
+        log['learned-count'] = len(actual) - len(new_files)
+        log['last-scan'] = datetime.now().isoformat() + 'Z'
+        save_log(log)
+        print(f"\n（已保存搬迁记录）")
 
-    if not new_files and not deleted_files and not shells:
+    if not new_files and not still_deleted and not shells:
         print("\n状态: 完全同步")
-    elif not new_files and not deleted_files:
+    elif not new_files and not still_deleted:
         print("\n状态: 同步一致（有空壳待处理）")
 
     return {
         'new': sorted(new_files),
-        'deleted': sorted(deleted_files),
+        'deleted': sorted(still_deleted),
+        'relocations': [(old, new) for old, new in sorted(relocations.items())],
         'matched': len(matched),
         'shells': [(rel, size, reason) for rel, size, reason in shells],
     }
