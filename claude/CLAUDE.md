@@ -418,6 +418,51 @@ version: v6.0
 
 ---
 
+## 九-A、docx 导出强制流程 `CRITICAL`
+
+> 行间距（固定值 vs 多倍行距）和引号（全角 vs 半角）是历史高频错误，反复踩坑。每次导出 docx 必须执行以下流程，不可跳过。
+
+### Step 1：导出前 — 源文件引号检查
+
+```bash
+# 检查源 .md 文件中所有引号是否已是中文全角
+python3 -c "
+with open('FILE.md') as f: t = f.read()
+l = t.count('\"')   # "
+r = t.count('\"')   # "
+a = t.count('\"')   # ASCII
+assert l == r, f'不配对: {l} vs {r}'
+assert a == 0, f'{a} 处 ASCII 半角引号，必须先修复'
+print(f'OK: {l} 对全角引号')
+"
+```
+
+### Step 2：生成 — docx-js 代码规范
+
+- 每个 paragraph 的 `spacing` 必须同时包含 `line: 560` 和 `lineRule: LineRuleType.EXACT`
+- 统一使用一个 `SPACING` 常量，不零散定义
+- `TextRun` 中的中文引号直接使用 Unicode 字面量 `""`，不拼接字符串
+
+### Step 3：导出后 — docx XML 检查
+
+```bash
+python3 .claude/skills/docx/scripts/office/unpack.py output.docx /tmp/check/
+echo "行间距: $(grep -c 'w:lineRule=\"exact\"' /tmp/check/word/document.xml) 段"
+echo "全角左引号: $(grep -c '&#x201C;' /tmp/check/word/document.xml)"
+echo "全角右引号: $(grep -c '&#x201D;' /tmp/check/word/document.xml)"
+echo "半角引号: $(grep -c '&quot;' /tmp/check/word/document.xml) ← 必须为 0"
+```
+
+### 常见错误对照
+
+| 错误 | 原因 | 正确做法 |
+|------|------|---------|
+| 行距看起来比 28pt 宽 | `lineRule` 默认 `auto`（多倍行距）| 显式设 `lineRule: LineRuleType.EXACT` |
+| 引号是直的 `""` 不是弯的 `""` | 源文件用了 ASCII `"`（U+0022）| 源文件即使用全角 `""`（U+201C/U+201D）|
+| docx 中引号变成 `&quot;` | JS 字符串拼接导致 | TextRun 中直接写 `""` 字符，不拼接 |
+
+---
+
 ## 七、齐鲁师范学院入库附录
 
 **触发**: 涉及齐鲁师范学院的文档入库时
