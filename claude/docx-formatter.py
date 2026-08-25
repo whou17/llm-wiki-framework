@@ -18,8 +18,6 @@ tracked-change fixes, then produces a fully formatted .docx with:
 import json
 import sys
 import os
-import subprocess
-import tempfile
 import shutil
 import copy
 from pathlib import Path
@@ -94,16 +92,6 @@ def next_tc_id():
 
 # ── OOXML Helpers ──────────────────────────────────────────────────────────
 
-def make_element(tag, attrib=None, text=None):
-    """Create an OOXML element with optional attributes and text."""
-    el = OxmlElement(tag)
-    if attrib:
-        for k, v in attrib.items():
-            el.set(qn(k), str(v))
-    if text is not None:
-        el.text = text
-    return el
-
 def clone_run_props(rPr_elem):
     """Deep-clone a <w:rPr> element for use in tracked-change runs."""
     return copy.deepcopy(rPr_elem)
@@ -161,10 +149,10 @@ def validate_manifest(m):
     errors = []
     if "paragraphs" not in m:
         errors.append("Missing 'paragraphs' key")
-        return False, errors
+        return False, errors, []
     if not isinstance(m["paragraphs"], list):
         errors.append("'paragraphs' must be a list")
-        return False, errors
+        return False, errors, []
 
     for i, p in enumerate(m["paragraphs"]):
         if not isinstance(p, dict):
@@ -202,32 +190,6 @@ def validate_manifest(m):
                 f" 如果这是 JSON 转义产生的 \"，请使用 Unicode 原字符。"
             )
     return len(errors) == 0, errors, quote_warnings
-
-# ── Source Conversion ──────────────────────────────────────────────────────
-
-def convert_source(source_path):
-    """Convert .doc to .docx if needed. Returns path to a readable .docx or None."""
-    src = Path(source_path)
-    if not src.exists():
-        print(f"ERROR: source file not found: {source_path}", file=sys.stderr)
-        return None
-
-    if src.suffix.lower() == ".docx":
-        return str(src)
-
-    if src.suffix.lower() == ".doc":
-        out = src.with_suffix(".docx")
-        result = subprocess.run(
-            ["textutil", "-convert", "docx", str(src), "-output", str(out)],
-            capture_output=True, text=True
-        )
-        if result.returncode != 0 or not out.exists():
-            print(f"ERROR: .doc conversion failed: {result.stderr}", file=sys.stderr)
-            return None
-        return str(out)
-
-    print(f"ERROR: unsupported source format: {src.suffix}", file=sys.stderr)
-    return None
 
 # ── Document Creation ──────────────────────────────────────────────────────
 
@@ -642,7 +604,6 @@ def main():
     parser.add_argument("manifest", nargs="?", help="Path to JSON manifest file")
     parser.add_argument("--stdin", action="store_true", help="Read manifest from stdin")
     parser.add_argument("-o", "--output", default=None, help="Output .docx path")
-    parser.add_argument("--source", default=None, help="Source file to read original text from")
 
     args = parser.parse_args()
 

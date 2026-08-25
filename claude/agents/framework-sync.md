@@ -31,12 +31,18 @@ model: sonnet
 | `.claude/sync-log.py` | `claude/sync-log.py` | 增量检测脚本 |
 | `.claude/policy-organize.py` | `claude/policy-organize.py` | 制度梳理脚本 |
 | `.claude/scripts/docx-formatter.py` | `claude/docx-formatter.py` | docx 格式管道 |
+| `.claude/scripts/docx-validate.sh` | `claude/docx-validate.sh` | docx 导出后验证脚本 |
 | `.claude/agents/docx-formatter.md` | `claude/agents/docx-formatter.md` | docx 格式 Agent |
 | `.claude/agents/framework-sync.md` | `claude/agents/framework-sync.md` | 框架同步 Agent（自身） |
 | `schema/0.index.md` | `schema/0.index.md` | 规则索引 |
 | `schema/1.frontmatter-spec.md` | `schema/1.frontmatter-spec.md` | 元数据规范 |
 | `schema/2.tag-index.md` | `schema/2.tag-index-template.md` | 标签字典（脱敏版） |
 | `schema/3.structured-learning.md` | `schema/3.learning-methods.md` | 学习方法论 |
+| `schema/4.writing-guide.md` | `schema/4.writing-guide.md` | 写作总指引（范式×画像） |
+| `schema/4a.pattern-first-agenda.md` | `schema/4a.pattern-first-agenda.md` | 第一议题表态范式 |
+| `schema/4b.pattern-people-forum.md` | `schema/4b.pattern-people-forum.md` | 人民论坛评论范式 |
+| `schema/5.persona-guide.md` | `schema/5.persona-guide.md` | 人物画像建模标准 |
+| `schema/6.lint-guide.md` | `schema/6.lint-guide.md` | 健康检查规范（五层体系） |
 
 **CRITICAL**: 必须实际 Read 每个源文件，记录其最后一轮更新的内容要点。
 

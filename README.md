@@ -30,6 +30,7 @@ flowchart TD
         T5["说 '对比分析'"]
         T6["说 '调整格式'"]
         T7["说 '框架同步'"]
+        T8["说 '撰写评论/第一议题'"]
     end
 
     subgraph Control["🧠 控制层 (claude/)"]
@@ -37,6 +38,7 @@ flowchart TD
         SYNC["sync-log.py<br/>增量检测脚本"]
         POLICY["policy-organize.py<br/>制度梳理脚本"]
         DOCX["docx-formatter.py<br/>公文格式管道"]
+        DOCXV["docx-validate.sh<br/>导出验证脚本"]
     end
 
     subgraph Agents["🤖 Agent 层 (claude/agents/)"]
@@ -48,15 +50,20 @@ flowchart TD
         S0["0.index.md<br/>规则索引"]
         S1["1.frontmatter-spec.md<br/>元数据规范"]
         S2["2.tag-index-template.md<br/>标签字典"]
-        S3["3.learning-methods.md<br/>学习方法论（含对比模式）"]
+        S3["3.learning-methods.md<br/>学习方法论"]
         S4["4.domain-extension-example.md<br/>领域扩展模板"]
+        S5["4.writing-guide.md<br/>写作总指引"]
+        S6["4a/4b.pattern-*.md<br/>写作范式"]
+        S7["5.persona-guide.md<br/>人物画像建模"]
+        S8["6.lint-guide.md<br/>健康检查规范"]
     end
 
     subgraph Pipeline["⚙️ 工作流"]
         K_IN["Knowledge-IN<br/>6步摄入流水线"]
         K_OUT["Knowledge-OUT<br/>4步知识检索"]
-        K_LINT["Knowledge-LINT<br/>5维健康检查"]
+        K_LINT["Knowledge-LINT<br/>五层健康检查 L0-L4"]
         K_CMP["对比模式<br/>C1-C6 修改痕迹建模"]
+        K_WRITE["写作体系<br/>范式×画像组合"]
     end
 
     subgraph Data["📦 数据层"]
@@ -74,11 +81,13 @@ flowchart TD
     T5 --> K_CMP
     T6 --> AG_DOCX
     T7 --> AG_SYNC
+    T8 --> K_WRITE
 
     CLAUDE --> K_IN
     CLAUDE --> K_OUT
     CLAUDE --> K_LINT
     CLAUDE --> K_CMP
+    CLAUDE --> K_WRITE
     CLAUDE --> AG_DOCX
     CLAUDE --> AG_SYNC
 
@@ -86,6 +95,11 @@ flowchart TD
     K_IN --> S2
     K_IN --> S3
     K_IN --> S1
+    K_WRITE --> S5
+    K_WRITE --> S6
+    K_WRITE --> S7
+    K_LINT --> S8
+    AG_DOCX --> DOCXV
 
     SYNC --> RAW
     K_IN --> RAW
@@ -93,6 +107,7 @@ flowchart TD
     K_OUT --> WIKI
     K_LINT --> WIKI
     K_CMP --> WIKI
+    K_WRITE --> WIKI
 
     WIKI --> WIKI_E
     WIKI --> WIKI_C
@@ -103,9 +118,9 @@ flowchart TD
 
 | 层 | 目录 | 职责 | 关键文件 |
 |---|------|------|---------|
-| **控制层** | `claude/` | 定义 LLM 行为的自然语言工作指引 + 工具脚本 | `CLAUDE.md`, `sync-log.py`, `policy-organize.py`, `docx-formatter.py` |
+| **控制层** | `claude/` | 定义 LLM 行为的自然语言工作指引 + 工具脚本 | `CLAUDE.md`, `sync-log.py`, `policy-organize.py`, `docx-formatter.py`, `docx-validate.sh` |
 | **Agent 层** | `claude/agents/` | 可复用的领域 Agent 定义，每个 Agent 封装完整工作流 | `docx-formatter.md`, `framework-sync.md` |
-| **规范层** | `schema/` | 规则标准，不包含知识内容 | 5 个 .md 规范文件 |
+| **规范层** | `schema/` | 规则标准，不包含知识内容 | 10 个 .md 规范文件（含写作/画像/健康检查扩展） |
 | **数据层** | `raw/` + `wiki/` | 原始语料（不可变）+ 知识萃取（可写）| 用户按需填充 |
 
 核心思路：**控制层告诉 LLM 做什么，Agent 层封装怎么做，规范层约束标准，数据层是操作对象。**
@@ -122,6 +137,7 @@ your-knowledge-base/
 │   ├── sync-log.py         ← 增量检测 + 空壳扫描
 │   ├── policy-organize.py  ← 制度文件分类与重命名
 │   ├── docx-formatter.py   ← 公文格式管道脚本
+│   ├── docx-validate.sh    ← docx 导出后验证脚本
 │   └── agents/             ← Agent 定义
 │       ├── docx-formatter.md  ← 公文格式调整 Agent
 │       └── framework-sync.md  ← 框架同步 Agent
@@ -130,6 +146,11 @@ your-knowledge-base/
 │   ├── 1.frontmatter-spec.md ← Frontmatter 规范
 │   ├── 2.tag-index-template.md ← 标签体系模板
 │   ├── 3.learning-methods.md   ← 结构化学习法（含对比模式）
+│   ├── 4.writing-guide.md      ← 写作总指引（范式×画像组合）
+│   ├── 4a.pattern-first-agenda.md ← 第一议题表态范式
+│   ├── 4b.pattern-people-forum.md ← 人民论坛评论范式
+│   ├── 5.persona-guide.md      ← 人物画像建模标准
+│   ├── 6.lint-guide.md         ← 健康检查规范（五层 L0-L4）
 │   └── 4.domain-extension-example.md ← 领域扩展模板
 ├── templates/              ← 本框架：初始化模板
 │   └── wiki-directory-structure.md
@@ -196,12 +217,20 @@ Step 6: 更新记录
 解析需求 → Grep检索wiki + schema → 输出结果(标来源+置信度) → 有价值则回写synthesis/
 ```
 
-### 3. Knowledge-LINT（健康检查）
+### 3. Knowledge-LINT（健康检查）`五层体系 in v6.3`
 
 **触发词**: "健康检查"、"查矛盾"、"查遗漏"
 
+健康检查从"内容体检"升级为**五层体系（L0-L4）**，完整规范见 `schema/6.lint-guide.md`：
+- **快检**（默认）：L0 内容层 + L1 工作流资产层（范式/画像状态/触发映射/tag提案）
+- **深检**（"深度健康检查"触发）：L0-L4 全层，含人工抽样
+
 ```
-矛盾检测 → 时效检测(>60天未更新) → 孤立检测(无入链页面) → 缺口检测 → 输出报告
+L0 内容层:   矛盾检测 → 时效检测(>60天) → 孤立检测 → 缺口检测
+L1 资产层:   画像状态三方对齐 / 范式库完整性 / 触发映射同步 / tag提案积压
+L2 画像层:   画像7维完整性 / 升级机会 / 时效性 / 画像-源材料一致性
+L3 产出层:   范式-产出一致 / 画像-产出一致 / 反哺闭环审计 / 引文纪律审计 / 去AI味审计
+L4 元数据层: 统计信息对齐 / 索引断链 / 文件可发现性 / 页面规模监控
 ```
 
 ### 4. 对比模式（修改痕迹反向建模）`NEW in v6.1`
@@ -234,6 +263,7 @@ C1: 识别对应稿件 → C2: A-F六维对比 → C3: 知识分流 → C4: 画�
 - **AI 做判断，脚本做执行**: AI 只输出 JSON 指令清单（段落类型 + 内容修正），Python 脚本处理全部 OOXML 细节
 - **AI 复检循环**: 生成后自动解包验证 10 项格式指标 + 6 项内容指标，发现问题自动循环修复
 - **修订模式**: 所有内容修正以 `<w:del>` / `<w:ins>` 标记，用户可逐条接受/拒绝
+- **导出后自动验证**: `docx-validate.sh` 一键校验行间距（28pt exact）与全角引号（零半角），替代手动 grep（`NEW in v6.4`）
 
 **支持的格式规范**: A4页面、方正小标宋标题、黑体/楷体标题、仿宋正文、28磅行距、奇偶页页码、东亚字体设置
 
@@ -258,6 +288,27 @@ Step 1 导出前 — 源 .md 文件引号检查（确认全部为中文全角 �
 Step 2 生成中 — docx-js 代码规范（spacing 必须 line:560 + lineRule:EXACT，统一 SPACING 常量）
 Step 3 导出后 — 解包 XML 检查（grep 行间距 exact / 全角引号实体 / 半角 &quot; 必须为 0）
 ```
+
+> 自动化替代：`bash claude/docx-validate.sh <output.docx>` 可一键执行 Step 3（行间距 + 引号校验），`NEW in v6.4`。
+
+### 8. 写作体系（范式 × 画像）`NEW in v6.3`
+
+**触发词**: "撰写评论"、"撰写第一议题"、"写表态发言"、"撰写X，以Y的视角切入"、人物修改稿摄入、新体裁材料入库
+
+写作任务统一走 `schema/4.writing-guide.md`，核心模型 = **体裁范式 × 说话人画像**——范式解决结构/格式/语言骨架，画像解决思维模式/语言风格/关注侧重（血肉），二者正交自由组合。
+
+```
+[Step 1] 解析需求（体裁+画像+主题） → [Step 2] 读范式页 → [Step 3] 加载画像
+→ [Step 4] 研究思考（Grep 素材） → [Step 5] 结构设计 → [Step 6] 成文
+→ [Step 7] 审校清单（含去AI味） → [Step 8] 交付 synthesis/
+```
+
+**关键规范**:
+- **范式库**: `schema/4a`（第一议题表态三段式）、`schema/4b`（人民论坛时评）等，新体裁随摄入持续新增（闭环B）
+- **画像库**: `schema/5.persona-guide.md` 定义 7 维建模模板，画像存于 `wiki/entities/人物-XX.md`（闭环A）
+- **画像使用边界**: 复用画像的思维/侧重/话语（"像X那样想问题"），非以其名义/第一人称代笔（讲话稿类除外）
+- **引文纪律六条** `CRITICAL`: CLAUDE.md §九 —— 加引号=原文照录、数据保留限定条件、跨场合语境标注、转引标注出处、政策归属准确、无源数据即废
+- **去AI味规范**: `schema/4` §三-A 九项清单（破折号清零/句式去模板/动词去同质化/意象词收敛/升华腔克制/引号节制等）
 
 ---
 
@@ -296,7 +347,7 @@ Step 3 导出后 — 解包 XML 检查（grep 行间距 exact / 全角引号实�
 - **一致性保障**: 如果 LLM 可以自由创建标签，同一个概念会被打上不同标签名（如"产教融合"vs"校企合作"）,检索时必然遗漏
 - **增长控制**: 标签可以增长，但必须通过 `open-questions` 提案 → 人工审核 → 写入字典的流程
 
-**关键数字**: 13 个一级标签 + ~90 个二级标签覆盖了高校管理的所有领域。这个规模在"够细"和"不过拟合"之间取得了平衡。对于其他领域，建议 8-15 个一级标签。
+**关键数字**: 14 个一级/实体标签 + 115 个二级标签（共 129 个注册标签）覆盖了高校管理的所有领域。这个规模在"够细"和"不过拟合"之间取得了平衡。对于其他领域，建议 8-15 个一级标签。
 
 ### 4. source 列表的置顶规则
 
@@ -376,6 +427,33 @@ Step 3 导出后 — 解包 XML 检查（grep 行间距 exact / 全角引号实�
 - 最终步骤始终包含 AI 复检或用户确认
 - 降级路径：主方案失败时有预设的备用方案
 
+### 11. 写作体系：范式 × 画像的正交组合 `NEW in v6.3`
+
+**决策**: 将写作任务建模为"体裁范式（结构骨架）× 说话人画像（思维血肉）"两个正交轴，分别存放在 `schema/4x` 与人物页，可自由组合。
+
+**原因**:
+- 传统写作指令把"结构"和"风格"揉在一起，无法复用。拆成两轴后，"第一议题用书记视角"和"第一议题用学术视角"只需换画像，不动范式
+- 画像解决"像谁在说话"：复用思维方式、关注侧重、话语体系，而不是让 LLM 冒充该人物署名（评论类以作者署名，讲话稿类才代画像口吻）
+- 范式库与画像库都是"吸附点"：新体裁摄入 → 建范式（闭环B）；人物修改稿摄入 → 反哺画像（闭环A）。框架随材料持续生长
+
+**实战价值**: 画像构建不再是一次性，而是每次人物修改稿摄入时的"信号吸附"——增/删/改是本人的主动选择，比公开讲话更能揭示其真实关注。
+
+### 12. 引文纪律：六条铁律沉淀 `NEW in v6.3`
+
+**决策**: CLAUDE.md §九 从"source 标注格式"升级为"引文纪律六条"，每条配正误示例。
+
+**原因**: 实测发现"有 source 不等于引法对"——常见错误包括加引号但非原文、省略数据限定条件、跨场合金句混用语境、转引未标出处、政策模式张冠李戴。
+
+**六条**:
+```
+1. 加引号 = 原文照录（含标点/数据/人名），转述不得加引号
+2. 数据引用保留限定条件（样本/时间/范围），不得强化对比
+3. 跨场合金句须注明语境（"此前他曾指出"）
+4. 转引须标注"援引/转引自"原始出处
+5. 政策/模式归属准确（对象/地域/层级一致）
+6. 数据无源即废 `HARD LIMIT`（宁用定性表述，不凭记忆补数字）
+```
+
 ---
 
 ## 快速上手
@@ -442,13 +520,13 @@ MIT License. 自由使用，自由修改。
 
 | 指标 | 数据 |
 |------|------|
-| 核心脚本 | 3 个 Python 脚本 (sync-log.py + policy-organize.py + docx-formatter.py) |
+| 核心脚本 | 3 个 Python 脚本 + 1 个 bash 校验脚本 (sync-log.py + policy-organize.py + docx-formatter.py + docx-validate.sh) |
 | Agent 定义 | 2 个 Agent (docx-formatter + framework-sync) |
-| 规范文件 | 5 个 Markdown 规范文件 |
-| 工作指引 | CLAUDE.md (~550行) |
-| 提取方法 | 3 种基础方法 + 1 种对比模式 |
-| 触发词 | 9 个触发词覆盖 6 种工作流 |
-| 标签体系 | 13 一级标签 + 113 二级标签（模板，可替换） |
+| 规范文件 | 10 个 Markdown 规范文件（含写作/画像/健康检查扩展） |
+| 工作指引 | CLAUDE.md (~600行) |
+| 提取方法 | 3 种基础方法 + 1 种对比模式 + 写作体系（范式×画像） |
+| 触发词 | 11 个触发词覆盖 9 种工作流 |
+| 标签体系 | 14 一级/实体标签 + 115 二级标签（共129注册，模板，可替换） |
 | 实际运营页面 | 134 页（概念 + 实体 + 综合分析） |
 
 ---
@@ -458,6 +536,25 @@ MIT License. 自由使用，自由修改。
 ---
 
 ## Changelog
+
+### v6.4 (2026-08-25)
+
+- 🆕 **工作流审计优化**: A规范层 + B资产层 14 项修复（schema 文件版本/描述/目录树对齐、tag-index↔concept 双向一致核查）
+- 🆕 **标签体系 v4.5**: 新增 `#人物` 实体标签（一级标签 13 + 1），新增 `#阅读素养` `#教育标准` 等二级标签，注册标签达 129 个（二级 115 个）
+- 🆕 **docx-validate.sh 新脚本**: 导出后一键校验行间距（28pt exact）与全角引号（半角零容忍），替代手动 grep 复检
+- 🆕 **五层健康检查 L0-L4**: `schema/6.lint-guide.md` 将健康检查从内容层升级为"内容+工作流资产+画像质量+写作产出+元数据导航"五层体系（含快检/深检两档）
+- 📝 CLAUDE.md 同步至 v6.4（写作触发词、引文纪律六条、五层健康检查入口、docx 强制流程）
+- 📝 schema/0.index.md 更新至 v3.4（新登记 4/4a/4b/5/6 规范文件）
+- 📝 framework-sync Agent 导出映射表更新（新增 docx-validate.sh + schema/4-6 共 6 个文件）
+- 📝 README 架构图/目录树/统计同步（规范文件 5 → 10，触发词 9 → 11）
+
+### v6.3 (2026-08-17)
+
+- 🆕 **写作体系（范式×画像）**: `schema/4.writing-guide.md` 统一写作入口（8 步流程 + 审校清单 + 去AI味规范），`schema/5.persona-guide.md` 画像 7 维建模模板，`schema/4a`/`4b` 两个初始范式页
+- 🆕 **引文纪律六条**: CLAUDE.md §九 沉淀写作/摄入通用引文纪律（原文照录/限定条件/语境/转引/归属/无源即废），每条配正误示例
+- 🆕 **去AI味语言规范**: `schema/4` §三-A 九项清单（破折号清零/句式去模板/动词去同质化/意象词收敛/升华腔克制/引号节制等）
+- 🆕 **健康检查升级五层体系雏形**: Knowledge-LINT 从 L0 内容层扩展为 L0-L4 五层
+- 📝 CLAUDE.md 新增写作触发词 5 组（撰写评论/第一议题/以Y视角/人物修改稿/新体裁），触发词 9 → 11
 
 ### v6.2 (2026-08-02)
 
