@@ -44,6 +44,14 @@ model: sonnet
 | `schema/4c.pattern-立项申请书.md` | `schema/4c.pattern-立项申请书.md` | 立项申请书范式（A/B两表制+匿名规则） |
 | `schema/5.persona-guide.md` | `schema/5.persona-guide.md` | 人物画像建模标准 |
 | `schema/6.lint-guide.md` | `schema/6.lint-guide.md` | 健康检查规范（五层体系） |
+| `.claude/skills/chinese-official-drafting/`（整目录） | `claude/skills/chinese-official-drafting/` | 中文公文起草 skill（自研方法论） |
+| `.claude/skills/literature-abstraction/`（整目录） | `claude/skills/literature-abstraction/` | 文献抽象提炼 skill（自研方法论） |
+| `.claude/skills/proofread-chinese/`（整目录） | `claude/skills/proofread-chinese/` | 中文审校 skill（自研方法论） |
+| `.claude/skills/seek-truth/`（整目录） | `claude/skills/seek-truth/` | 真实严谨 skill（自研方法论） |
+
+> 目录型导出：带"（整目录）"的 skills 行为 `cp -R` 镜像，非单文件。Anthropic 官方/第三方 skill
+> （`docx`/`pdf`/`defuddle`/`excalidraw-diagram`/`mermaid-visualizer`/`obsidian-canvas-creator`）授权禁止
+> 公开再分发，**即使 vault 内已安装也不得导出**（见 Step 3-C）。
 
 **CRITICAL**: 必须实际 Read 每个源文件，记录其最后一轮更新的内容要点。
 
@@ -70,7 +78,29 @@ model: sonnet
 对每个需要更新的文件：
 1. Read 源文件 → Write 到导出路径
 2. 如果是 `2.tag-index.md`，脱敏处理（移除具体的学校/人员名称，保留标签结构）
-3. 新增文件需确保目录存在（mkdir -p）
+3. 如果源文件是**画像承载文件**（claude/CLAUDE.md、schema/0.index.md、schema/4/4a/4b、schema/5、README），写入导出路径前必须执行 **Step 3-B 脱敏**，禁止把内部人物画像带入公开仓库
+4. 新增文件需确保目录存在（mkdir -p）
+
+### Step 3-B：画像脱敏导出 `HARD LIMIT`
+
+> 内部人物（党委书记、校长等，**具体姓名见源文件画像库，不在本文件中硬编码**）的**姓名与画像内容属内部材料，一律不随框架公开**（公共文档只能以"党委书记画像/校长画像"等角色指代）。源文件保留完整画像，仅导出时脱敏。
+
+| 源文件 | 导出时脱敏动作 |
+|--------|---------|
+| `.claude/CLAUDE.md` | 触发词中若以具名书记为默认画像 → 改写为"默认党委书记画像" |
+| `schema/0.index.md` | 溯源语"提炼自…+[具名人物]画像" → "提炼自党委会第一议题表态实践" |
+| `schema/4.writing-guide.md` | 画像库删除书记/校长具名行；路由表与署名边界示例的具名默认 → "默认党委书记画像" |
+| `schema/4a.pattern-first-agenda.md` | 溯源/默认画像去掉具名人物 → "党委书记画像"；删除指向内部画像页的写法 |
+| `schema/4b.pattern-people-forum.md` | 可指定画像示例中具名书记 → "以党委书记画像视角切入" |
+| `schema/5.persona-guide.md` | 删除具名模板范本（改为"内部示例不公开"说明）；画像库删除书记/校长具名行；请求语法示例人名 → 角色 |
+| `README.md` | 删除 changelog/正文中书记/校长画像条目 |
+
+**通用规则**：任何人物画像不得携带"姓名 + 具体施政/话语内容"进入公开仓库。若源文件日后新增其他内部人物画像，一律按"角色指代、内容删除"处理；拿不准即暂停询问用户。
+
+### Step 3-C：skills 目录导出
+
+- 仅导出**自研方法论 skill**（4 个）：`chinese-official-drafting`、`literature-abstraction`、`proofread-chinese`、`seek-truth`，整目录 `cp -R` 至 `claude/skills/<name>/`。
+- **禁止导出** Anthropic 官方/第三方 skill：`docx`/`pdf`（含 Proprietary LICENSE.txt，明文禁止 extract/reproduce/distribute）、`defuddle`/`excalidraw-diagram`/`mermaid-visualizer`/`obsidian-canvas-creator`（Claude 环境内置工具，同受服务条款约束）。
 
 ---
 
@@ -132,6 +162,19 @@ git status
 **CRITICAL**: 提交前展示变更摘要（新增/修改/删除的文件列表 + changelog 要点），
 供用户确认后再执行 commit 和 push。
 
+**敏感信息闸门（push 前必查）**:
+
+先读取 vault 源文件画像库（`schema/4.writing-guide.md` §四、`schema/5.persona-guide.md` §六）中书记/校长等内部人物的**具名清单**，逐个在导出树检查：
+
+```bash
+cd llm-wiki-framework/
+grep -rn "<具名内部人物1>\|<具名内部人物2>" --include="*.md" claude/ schema/ README.md templates/ \
+  && echo "⚠ 发现内部人物姓名，禁止 push，回 Step 3-B 补脱敏" \
+  || echo "✅ 无内部人物姓名"
+```
+
+命中即**禁止 push**，必须先回 Step 3-B 补脱敏并复查。
+
 ```bash
 git commit -m "框架同步: <一句话总结本次变更>"
 git push origin main
@@ -146,3 +189,5 @@ git push origin main
 - ❌ 未经用户确认直接 push
 - ❌ 导出 wiki/ 或 raw/ 中的实际内容数据（框架模板只导出结构，不导出数据）
 - ❌ 导出包含敏感信息的内容（如具体学校数据、人员姓名）
+- ❌ 导出内部人物画像（书记/校长等**姓名与画像内容**，公共文档仅角色指代）
+- ❌ 导出 Anthropic 官方/第三方 skill（docx/pdf 含 Proprietary LICENSE；defuddle/excalidraw-diagram/mermaid-visualizer/obsidian-canvas-creator 亦不外发）

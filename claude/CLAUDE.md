@@ -101,7 +101,7 @@ version: v6.4
 | "调整格式"/"docx格式"/"标准格式" | → 启动 docx-formatter Agent (macOS) | docx公文格式调整+修订。云服务器(Hermes)直接用 pandoc 双向转换 |
 | "框架同步"/"汇总上传"/"同步框架" | → 启动 framework-sync Agent | 工作流汇总→llm-wiki-framework→GitHub |
 | "撰写评论"/"评论撰写"/"写评论" | → 执行写作总流程（`schema/4.writing-guide.md`） | 4b范式×画像组合（默认作者，可指定）→研究立意→三层成文≤1400字→存synthesis |
-| "撰写第一议题"/"写表态发言" | → 执行写作总流程（`schema/4.writing-guide.md`） | 4a范式×画像组合（默认党委书记，可指定）→三段式成文→存synthesis。简短表态发言走4a范式；成体系公文/讲话稿/学习计划走 chinese-official-drafting skill |
+| "撰写第一议题"/"写表态发言" | → 执行写作总流程（`schema/4.writing-guide.md`） | 4a范式×画像组合（默认党委书记画像，可指定）→三段式成文→存synthesis。简短表态发言走4a范式；成体系公文/讲话稿/学习计划走 chinese-official-drafting skill |
 | "撰写X，以Y的视角切入" | → 执行写作总流程（`schema/4.writing-guide.md` §一） | 4x范式 + Y画像（画像不锁定体裁，见`schema/5.persona-guide.md`） |
 | 任何人物修改稿/讲话摄入 | → 执行画像构建/反哺闭环（`schema/4.writing-guide.md` §五-A + `schema/5.persona-guide.md`） | 对比增删改→建/更新人物画像→联动4x范式→记speech-comparison-log |
 | 新体裁材料入库（如"科研立项书"） | → 执行范式新建闭环（`schema/4.writing-guide.md` §五-B） | 提炼共性→新建schema/4x范式页→路由表加一行 |

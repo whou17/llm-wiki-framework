@@ -46,6 +46,13 @@ flowchart TD
         AG_SYNC["framework-sync<br/>框架同步→GitHub"]
     end
 
+    subgraph Skills["🛠️ 技能层 (claude/skills/)"]
+        SK_DRAFT["chinese-official-drafting<br/>公文/讲话稿起草"]
+        SK_LIT["literature-abstraction<br/>文献抽象提炼"]
+        SK_PRF["proofread-chinese<br/>中文审校"]
+        SK_TRUTH["seek-truth<br/>真实严谨守则"]
+    end
+
     subgraph Schema["📐 规范层 (schema/)"]
         S0["0.index.md<br/>规则索引"]
         S1["1.frontmatter-spec.md<br/>元数据规范"]
@@ -90,6 +97,11 @@ flowchart TD
     CLAUDE --> K_WRITE
     CLAUDE --> AG_DOCX
     CLAUDE --> AG_SYNC
+    CLAUDE --> SK_LIT
+    CLAUDE --> SK_DRAFT
+
+    K_WRITE --> SK_PRF
+    K_WRITE --> SK_TRUTH
 
     K_IN --> K_CMP
     K_IN --> S2
@@ -120,6 +132,7 @@ flowchart TD
 |---|------|------|---------|
 | **控制层** | `claude/` | 定义 LLM 行为的自然语言工作指引 + 工具脚本 | `CLAUDE.md`, `sync-log.py`, `policy-organize.py`, `docx-formatter.py`, `docx-validate.sh` |
 | **Agent 层** | `claude/agents/` | 可复用的领域 Agent 定义，每个 Agent 封装完整工作流 | `docx-formatter.md`, `framework-sync.md` |
+| **技能层** | `claude/skills/` | 自研方法论技能（公文起草/文献抽象/中文审校/真实严谨） | `chinese-official-drafting`, `literature-abstraction`, `proofread-chinese`, `seek-truth` |
 | **规范层** | `schema/` | 规则标准，不包含知识内容 | 11 个 .md 规范文件（含写作/画像/健康检查扩展） |
 | **数据层** | `raw/` + `wiki/` | 原始语料（不可变）+ 知识萃取（可写）| 用户按需填充 |
 
@@ -138,9 +151,14 @@ your-knowledge-base/
 │   ├── policy-organize.py  ← 制度文件分类与重命名
 │   ├── docx-formatter.py   ← 公文格式管道脚本
 │   ├── docx-validate.sh    ← docx 导出后验证脚本
-│   └── agents/             ← Agent 定义
-│       ├── docx-formatter.md  ← 公文格式调整 Agent
-│       └── framework-sync.md  ← 框架同步 Agent
+│   ├── agents/             ← Agent 定义
+│   │   ├── docx-formatter.md  ← 公文格式调整 Agent
+│   │   └── framework-sync.md  ← 框架同步 Agent
+│   └── skills/             ← 自研方法论技能
+│       ├── chinese-official-drafting/  ← 公文/讲话稿起草
+│       ├── literature-abstraction/     ← 文献抽象提炼
+│       ├── proofread-chinese/          ← 中文审校
+│       └── seek-truth/                 ← 真实严谨守则
 ├── schema/                 ← 本框架：规则标准
 │   ├── 0.index.md          ← 规则索引
 │   ├── 1.frontmatter-spec.md ← Frontmatter 规范
@@ -523,6 +541,7 @@ MIT License. 自由使用，自由修改。
 |------|------|
 | 核心脚本 | 3 个 Python 脚本 + 1 个 bash 校验脚本 (sync-log.py + policy-organize.py + docx-formatter.py + docx-validate.sh) |
 | Agent 定义 | 2 个 Agent (docx-formatter + framework-sync) |
+| 技能包 | 4 个自研方法论 skill (chinese-official-drafting / literature-abstraction / proofread-chinese / seek-truth) |
 | 规范文件 | 11 个 Markdown 规范文件（含写作/画像/健康检查扩展） |
 | 工作指引 | CLAUDE.md (~600行) |
 | 提取方法 | 3 种基础方法 + 1 种对比模式 + 写作体系（范式×画像） |
@@ -538,10 +557,16 @@ MIT License. 自由使用，自由修改。
 
 ## Changelog
 
+### v6.6 (2026-09-06)
+
+- 🆕 **技能层 `claude/skills/`**: 导出 4 个自研方法论 skill —— `chinese-official-drafting`（公文/讲话稿起草）、`literature-abstraction`（文献抽象提炼）、`proofread-chinese`（中文审校）、`seek-truth`（真实严谨守则）。Anthropic 官方/第三方 skill（docx/pdf/defuddle/excalidraw-diagram/mermaid-visualizer/obsidian-canvas-creator）因授权限制不随框架分发
+- 🔒 **人物画像脱敏**: 书记/校长等内部人物画像**姓名与内容一律不随框架公开**——画像库移除具名行、模板范本去具名化，公共文档改以"党委书记画像"等角色指代；framework-sync 新增 Step 3-B 脱敏层 + Step 5 push 前姓名闸门
+- 🗑️ **历史清理**: 重写公开仓库 Git 历史，清除历史提交中已同步的内部人物姓名（commit hash 已变更）
+- 📝 README 目录树/架构图/分层表/项目统计同步（新增技能层）
+
 ### v6.5 (2026-09-06)
 
 - 🆕 **4c 科研立项申请书范式**: `schema/4c.pattern-立项申请书.md` v0.1 —— A/B 两表制（实名/匿名）+ 匿名改写规则 + 课题论证五部分 + 语言要点 + 自检清单；由 2026-08 山东省高校哲社项目申报书提炼，`[待补强：仅1篇材料]`，是"新体裁→建范式"闭环 B 的落点实例
-- 🆕 **校长画像入列画像库**: `schema/4.writing-guide.md` 路由表新增"撰写立项申请书/科研立项书"→ 4c 范式 × 作者画像；`schema/4`/`schema/5` 画像库新增 校长画像雏形画像（施政理念方法论：五个要素评判公式 + 一院一策 + 学科四大行动 + 科研四个面向 + 职称杠杆论，2026-09-01 开学部署会素材），"基本信息待升级"人物计数 8 → 7
 - 🆕 **文献抽象提炼入口**: CLAUDE.md 触发词表新增 literature-abstraction skill 入口（"举一反三"/"文献抽象提炼"/"通读文献丰富"）—— 契合点识别 → 核心问题抽象 → 思路启发 → 内容维度拓展 → 原创表达；把文献问题域转化为研究建构
 - 📝 schema/0.index.md 核心文档表 + 目录树登记 4c；framework-sync Agent 导出映射表新增 4c 行
 - 📝 README 架构图/目录树/范式库说明/统计同步（规范文件 10 → 11）
