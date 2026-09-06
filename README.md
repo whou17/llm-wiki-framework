@@ -53,7 +53,7 @@ flowchart TD
         S3["3.learning-methods.md<br/>学习方法论"]
         S4["4.domain-extension-example.md<br/>领域扩展模板"]
         S5["4.writing-guide.md<br/>写作总指引"]
-        S6["4a/4b.pattern-*.md<br/>写作范式"]
+        S6["4a/4b/4c.pattern-*.md<br/>写作范式"]
         S7["5.persona-guide.md<br/>人物画像建模"]
         S8["6.lint-guide.md<br/>健康检查规范"]
     end
@@ -120,7 +120,7 @@ flowchart TD
 |---|------|------|---------|
 | **控制层** | `claude/` | 定义 LLM 行为的自然语言工作指引 + 工具脚本 | `CLAUDE.md`, `sync-log.py`, `policy-organize.py`, `docx-formatter.py`, `docx-validate.sh` |
 | **Agent 层** | `claude/agents/` | 可复用的领域 Agent 定义，每个 Agent 封装完整工作流 | `docx-formatter.md`, `framework-sync.md` |
-| **规范层** | `schema/` | 规则标准，不包含知识内容 | 10 个 .md 规范文件（含写作/画像/健康检查扩展） |
+| **规范层** | `schema/` | 规则标准，不包含知识内容 | 11 个 .md 规范文件（含写作/画像/健康检查扩展） |
 | **数据层** | `raw/` + `wiki/` | 原始语料（不可变）+ 知识萃取（可写）| 用户按需填充 |
 
 核心思路：**控制层告诉 LLM 做什么，Agent 层封装怎么做，规范层约束标准，数据层是操作对象。**
@@ -149,6 +149,7 @@ your-knowledge-base/
 │   ├── 4.writing-guide.md      ← 写作总指引（范式×画像组合）
 │   ├── 4a.pattern-first-agenda.md ← 第一议题表态范式
 │   ├── 4b.pattern-people-forum.md ← 人民论坛评论范式
+│   ├── 4c.pattern-立项申请书.md ← 科研立项书范式（闭环B实例）
 │   ├── 5.persona-guide.md      ← 人物画像建模标准
 │   ├── 6.lint-guide.md         ← 健康检查规范（五层 L0-L4）
 │   └── 4.domain-extension-example.md ← 领域扩展模板
@@ -304,7 +305,7 @@ Step 3 导出后 — 解包 XML 检查（grep 行间距 exact / 全角引号实�
 ```
 
 **关键规范**:
-- **范式库**: `schema/4a`（第一议题表态三段式）、`schema/4b`（人民论坛时评）等，新体裁随摄入持续新增（闭环B）
+- **范式库**: `schema/4a`（第一议题表态三段式）、`schema/4b`（人民论坛时评）、`schema/4c`（科研立项申请书，2026-08 新体裁闭环B实例）等，新体裁随摄入持续新增（闭环B）
 - **画像库**: `schema/5.persona-guide.md` 定义 7 维建模模板，画像存于 `wiki/entities/人物-XX.md`（闭环A）
 - **画像使用边界**: 复用画像的思维/侧重/话语（"像X那样想问题"），非以其名义/第一人称代笔（讲话稿类除外）
 - **引文纪律六条** `CRITICAL`: CLAUDE.md §九 —— 加引号=原文照录、数据保留限定条件、跨场合语境标注、转引标注出处、政策归属准确、无源数据即废
@@ -522,7 +523,7 @@ MIT License. 自由使用，自由修改。
 |------|------|
 | 核心脚本 | 3 个 Python 脚本 + 1 个 bash 校验脚本 (sync-log.py + policy-organize.py + docx-formatter.py + docx-validate.sh) |
 | Agent 定义 | 2 个 Agent (docx-formatter + framework-sync) |
-| 规范文件 | 10 个 Markdown 规范文件（含写作/画像/健康检查扩展） |
+| 规范文件 | 11 个 Markdown 规范文件（含写作/画像/健康检查扩展） |
 | 工作指引 | CLAUDE.md (~600行) |
 | 提取方法 | 3 种基础方法 + 1 种对比模式 + 写作体系（范式×画像） |
 | 触发词 | 11 个触发词覆盖 9 种工作流 |
@@ -536,6 +537,14 @@ MIT License. 自由使用，自由修改。
 ---
 
 ## Changelog
+
+### v6.5 (2026-09-06)
+
+- 🆕 **4c 科研立项申请书范式**: `schema/4c.pattern-立项申请书.md` v0.1 —— A/B 两表制（实名/匿名）+ 匿名改写规则 + 课题论证五部分 + 语言要点 + 自检清单；由 2026-08 山东省高校哲社项目申报书提炼，`[待补强：仅1篇材料]`，是"新体裁→建范式"闭环 B 的落点实例
+- 🆕 **校长画像入列画像库**: `schema/4.writing-guide.md` 路由表新增"撰写立项申请书/科研立项书"→ 4c 范式 × 作者画像；`schema/4`/`schema/5` 画像库新增 校长画像雏形画像（施政理念方法论：五个要素评判公式 + 一院一策 + 学科四大行动 + 科研四个面向 + 职称杠杆论，2026-09-01 开学部署会素材），"基本信息待升级"人物计数 8 → 7
+- 🆕 **文献抽象提炼入口**: CLAUDE.md 触发词表新增 literature-abstraction skill 入口（"举一反三"/"文献抽象提炼"/"通读文献丰富"）—— 契合点识别 → 核心问题抽象 → 思路启发 → 内容维度拓展 → 原创表达；把文献问题域转化为研究建构
+- 📝 schema/0.index.md 核心文档表 + 目录树登记 4c；framework-sync Agent 导出映射表新增 4c 行
+- 📝 README 架构图/目录树/范式库说明/统计同步（规范文件 10 → 11）
 
 ### v6.4 (2026-08-25)
 

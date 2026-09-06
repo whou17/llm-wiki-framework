@@ -105,6 +105,7 @@ version: v6.4
 | "撰写X，以Y的视角切入" | → 执行写作总流程（`schema/4.writing-guide.md` §一） | 4x范式 + Y画像（画像不锁定体裁，见`schema/5.persona-guide.md`） |
 | 任何人物修改稿/讲话摄入 | → 执行画像构建/反哺闭环（`schema/4.writing-guide.md` §五-A + `schema/5.persona-guide.md`） | 对比增删改→建/更新人物画像→联动4x范式→记speech-comparison-log |
 | 新体裁材料入库（如"科研立项书"） | → 执行范式新建闭环（`schema/4.writing-guide.md` §五-B） | 提炼共性→新建schema/4x范式页→路由表加一行 |
+| "举一反三"/"文献抽象提炼"/"通读文献丰富" | → 执行 literature-abstraction skill（`.claude/skills/literature-abstraction/`） | 契合点识别→核心问题抽象→思路启发→内容维度拓展→原创表达；把文献问题域转化为研究建构，研究内容板块不直接引用（引用留研究现状） |
 
 ---
 

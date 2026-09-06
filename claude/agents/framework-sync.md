@@ -41,6 +41,7 @@ model: sonnet
 | `schema/4.writing-guide.md` | `schema/4.writing-guide.md` | 写作总指引（范式×画像） |
 | `schema/4a.pattern-first-agenda.md` | `schema/4a.pattern-first-agenda.md` | 第一议题表态范式 |
 | `schema/4b.pattern-people-forum.md` | `schema/4b.pattern-people-forum.md` | 人民论坛评论范式 |
+| `schema/4c.pattern-立项申请书.md` | `schema/4c.pattern-立项申请书.md` | 立项申请书范式（A/B两表制+匿名规则） |
 | `schema/5.persona-guide.md` | `schema/5.persona-guide.md` | 人物画像建模标准 |
 | `schema/6.lint-guide.md` | `schema/6.lint-guide.md` | 健康检查规范（五层体系） |
 
